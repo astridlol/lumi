@@ -14,8 +14,8 @@ const success = (message: string) => {
 	return embed;
 };
 
-const info = (message: string) => {
-	const embed = new EmbedBuilder().setColor(Colors.purple).setDescription(message);
+const info = () => {
+	const embed = new EmbedBuilder().setColor(Colors.purple);
 	return embed;
 };
 

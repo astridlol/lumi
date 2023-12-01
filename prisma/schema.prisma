@@ -7,13 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Pet {
+model Lumi {
   id        String   @id @default(cuid())
+  name String
   createdAt DateTime @default(now())
   playerId  String
 }
 
 model Player {
   id  String @id
-  pet String
+  lumi String?
 }

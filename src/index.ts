@@ -11,17 +11,13 @@ require('dotenv').config();
 export const prisma = new PrismaClient();
 
 export const client = new Client({
-	intents: [
-		IntentsBitField.Flags.GuildMessages,
-		IntentsBitField.Flags.MessageContent,
-		IntentsBitField.Flags.Guilds
-	],
+	intents: [],
 	silent: false
 });
 
 client.on('ready', async () => {
-	await client.clearApplicationCommands();
-	await client.initApplicationCommands();
+	// await client.clearApplicationCommands();
+	// await client.initApplicationCommands();
 
 	console.log('> Lumi is now awake, logged in as: ' + client.user!!.tag);
 });
