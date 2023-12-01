@@ -4,10 +4,16 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model Pet {
-  id String @id @default(cuid())
+  id        String   @id @default(cuid())
   createdAt DateTime @default(now())
+  playerId  String
+}
+
+model Player {
+  id  String @id
+  pet String
 }
