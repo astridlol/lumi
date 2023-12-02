@@ -307,7 +307,7 @@ export class LumiCommand {
 			content: `You take ${lumi.name} out to play in the snow...`
 		});
 
-		await sleep(2000);
+		await sleep(1000);
 
 		const isFeelingSnow = LumiUtils.isWilling(lumi);
 
@@ -446,8 +446,14 @@ export class LumiCommand {
 			.setTitle(`You won!`)
 			.setDescription(`${playedChoice} beats ${choice}!`);
 
-		const modifed = LumiUtils.modifyHappiness(lumi, 2, 'decrement');
-		if (modifed) youWon.setFooter({ text: `-2 Happiness >:(` });
+		const isGoodSport = LumiUtils.isWilling(lumi);
+		if (!isGoodSport) {
+			const modifed = LumiUtils.modifyHappiness(lumi, 2, 'decrement');
+			if (modifed) youWon.setFooter({ text: `-2 Happiness >:(` });
+		} else {
+			const modifed = LumiUtils.modifyHappiness(lumi, 1, 'increment');
+			if (modifed) youWon.setFooter({ text: `+1 Happiness c: (good sport)` });
+		}
 
 		await interaction.editReply({ embeds: [youWon] });
 	}
