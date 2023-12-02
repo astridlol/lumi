@@ -172,6 +172,25 @@ class LumiCommand {
 		interaction: CommandInteraction
 	) {
 		await interaction.deferReply({ ephemeral: true });
+
+		const cacheKey = `recentlyPlayed_${interaction.user.id}`;
+		if (cache.has(cacheKey)) {
+			const lumi = await prisma.lumi.findUnique({
+				where: {
+					playerId: interaction.user.id
+				}
+			});
+
+			const embed = Embeds.error()
+				.setTitle('Uh oh')
+				.setDescription(`${lumi.name} is a bit worn out, ask again later.`);
+			interaction.editReply({
+				embeds: [embed]
+			});
+			return;
+		}
+		cache.set(cacheKey, true, 60 * 10);
+
 		switch (game) {
 			case 'rps': {
 				this.playRPS(interaction);
