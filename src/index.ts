@@ -21,6 +21,9 @@ client.on('ready', async () => {
 	// await client.initApplicationCommands();
 
 	console.log('> Lumi is now awake, logged in as: ' + client.user!!.tag);
+
+	// used require rather than import in order to "start" the file.
+	require('./lib/Aging');
 });
 
 client.on('interactionCreate', (interaction) => {

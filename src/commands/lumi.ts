@@ -35,7 +35,7 @@ type LumiGames = 'rps' | 'snow';
 @Guard(RequireLumi)
 @SlashGroup({ description: 'Manage your Lumi', name: 'lumi' })
 @SlashGroup('lumi')
-class LumiCommand {
+export class LumiCommand {
 	@Slash({ description: 'View stats for your Lumi' })
 	async stats(interaction: CommandInteraction) {
 		await interaction.deferReply({
@@ -63,9 +63,9 @@ class LumiCommand {
 
 		const ageEmoji = () => {
 			if (lumi.age < 4) return ':baby_bottle:';
-			if (stats.happiness < 13) return ':child:';
-			if (stats.happiness > 18) return ':star_struck:';
-			if (stats.happiness > 60) return ':older_adult:';
+			if (lumi.age < 13) return ':child:';
+			if (lumi.age > 18) return ':star_struck:';
+			if (lumi.age > 60) return ':older_adult:';
 			else return ':skull:';
 		};
 
@@ -453,7 +453,7 @@ class LumiCommand {
 		await interaction.editReply({ embeds: [youWon] });
 	}
 
-	private async modifyHappiness(
+	async modifyHappiness(
 		lumi: Lumi,
 		amount: number,
 		action: 'increment' | 'decrement'
@@ -487,7 +487,7 @@ class LumiCommand {
 		return true;
 	}
 
-	private async modifyHealth(
+	async modifyHealth(
 		lumi: Lumi,
 		amount: number,
 		action: 'increment' | 'decrement'
