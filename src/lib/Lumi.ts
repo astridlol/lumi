@@ -1,6 +1,11 @@
 import { Lumi } from '@prisma/client';
 import { prisma } from '..';
 
+type UpdateData = {
+	increment?: number;
+	decrement?: number;
+};
+
 async function modifyHappiness(
 	lumi: Lumi,
 	amount: number,
@@ -17,10 +22,7 @@ async function modifyHappiness(
 	if (action == 'increment' && stats.happiness >= 100) return false;
 	if (action == 'decrement' && stats.happiness <= 0) return false;
 
-	const updateData: {
-		increment?: number;
-		decrement?: number;
-	} = {};
+	const updateData: UpdateData = {};
 
 	if (action == 'increment') updateData.increment = amount;
 	else updateData.decrement = amount;
@@ -51,10 +53,7 @@ async function modifyHealth(
 	if (action == 'increment' && stats.health >= 100) return false;
 	if (action == 'decrement' && stats.health <= 0) return false;
 
-	const updateData: {
-		increment?: number;
-		decrement?: number;
-	} = {};
+	const updateData: UpdateData = {};
 
 	if (action == 'increment') updateData.increment = amount;
 	else updateData.decrement = amount;
@@ -70,12 +69,10 @@ async function modifyHealth(
 }
 
 async function isWilling(lumi: Lumi) {
-	const where = {
-		lumiId: lumi.id
-	};
-
 	const stats = await prisma.lumiStats.findUnique({
-		where
+		where: {
+			lumiId: lumi.id
+		}
 	});
 
 	const chance = Math.random();
