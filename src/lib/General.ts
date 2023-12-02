@@ -1,3 +1,5 @@
+import { client } from '..';
+
 const Dayjs = require('dayjs');
 var utc = require('dayjs/plugin/utc');
 var timezone = require('dayjs/plugin/timezone'); // dependent on utc plugin
@@ -18,4 +20,9 @@ const prettify = (s: string, titleCase: boolean = false) => {
 			.join(' ');
 };
 
-export { prettify, getTime };
+const getCommand = async (name: string) => {
+	await client.application.commands.fetch();
+	return client.application.commands.cache.find((c) => c.name == name);
+};
+
+export { prettify, getTime, getCommand };

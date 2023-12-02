@@ -2,7 +2,6 @@ import 'reflect-metadata';
 
 import { importx } from '@discordx/importer';
 import { Client } from 'discordx';
-import { IntentsBitField } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 import { env } from './env/server';
 
@@ -16,8 +15,8 @@ export const client = new Client({
 });
 
 client.on('ready', async () => {
-	// await client.clearApplicationCommands();
-	// await client.initApplicationCommands();
+	await client.clearApplicationCommands();
+	await client.initApplicationCommands();
 
 	console.log('> Lumi is now awake, logged in as: ' + client.user!!.tag);
 });

@@ -39,9 +39,9 @@ class Adopt {
 				}
 			});
 
-			const embed = Embeds.error(
-				`In order to adopt a new one, you'll have to disown ${bold(lumi.name)} :(`
-			).setTitle('You already have a Lumi!');
+			const embed = Embeds.error()
+				.setTitle('You already have a Lumi!')
+				.setDescription(`In order to adopt a new one, you'll have to disown ${bold(lumi.name)} :(`);
 
 			interaction.editReply({
 				embeds: [embed]
@@ -134,7 +134,6 @@ class Adopt {
 			const messages = [
 				`Signing adoption papers for ${name}...`,
 				`Telling ${name} their name...`,
-				`Finding cute clothes for ${name}...`,
 				`${name} is ready to take home! Start by doing ${inlineCode('/lumi feed')}.`
 			];
 

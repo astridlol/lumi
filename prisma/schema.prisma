@@ -11,16 +11,17 @@ model Lumi {
   id        String   @id @default(cuid())
   name String
   createdAt DateTime @default(now())
-  playerId  String
+  playerId  String @unique
 }
 
 model LumiStats {
   lumiId String @id
-  hunger Int @default(100)
-  hapiness Int @default(0)
+  health Int @default(75)
+  happiness Int @default(75)
 }
 
 model Player {
   id  String @id
   lumi String?
+  food Json @default("[\"kibble\"]")
 }

@@ -1,16 +1,13 @@
 import { EmbedBuilder } from 'discord.js';
 import Colors from './Colors';
 
-const error = (message: string) => {
-	const embed = new EmbedBuilder().setColor(Colors.red).setDescription(message);
+const error = () => {
+	const embed = new EmbedBuilder().setColor(Colors.red);
 	return embed;
 };
 
-const success = (message: string) => {
-	const embed = new EmbedBuilder()
-		.setColor(Colors.green)
-		.setTitle('Success')
-		.setDescription(message);
+const success = () => {
+	const embed = new EmbedBuilder().setColor(Colors.green);
 	return embed;
 };
 
