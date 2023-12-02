@@ -171,6 +171,68 @@ class LumiCommand {
 		});
 	}
 
+	@ButtonComponent({
+		id: /rps_(rock|paper|scissors)/
+	})
+	async handleRPSGame(interaction: ButtonInteraction) {
+		const cacheKey = `playingRPS_${interaction.user.id}`;
+		if (!cache.get(cacheKey)) {
+			await interaction.deferUpdate();
+			return;
+		}
+		cache.del(cacheKey);
+
+		// only used so i don't have to specify ephemeral for each message :sob:
+		await interaction.deferReply({
+			ephemeral: true
+		});
+
+		const choices = ['rock', 'paper', 'scissors'];
+		const choice = choices[Math.floor(Math.random() * choices.length)];
+		const playedChoice = interaction.customId.split('_').pop();
+
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		if (choice === playedChoice) {
+			const tieEmbed = Embeds.info()
+				.setTitle("It's a tie!")
+				.setDescription(`You and ${lumi.name} both chose ${playedChoice}!`);
+			await interaction.editReply({ embeds: [tieEmbed] });
+			return;
+		}
+
+		const winningConditions = {
+			rock: 'scissors',
+			scissors: 'paper',
+			paper: 'rock'
+		};
+
+		if (winningConditions[choice] === playedChoice) {
+			const lumiWon = Embeds.success()
+				.setTitle(`${lumi.name} won!`)
+				.setDescription(`${choice} beats ${playedChoice}!`);
+
+			const modifed = this.modifyHappiness(lumi, 2, 'increment');
+			if (modifed) lumiWon.setFooter({ text: `+2 Happiness c:` });
+
+			await interaction.editReply({ embeds: [lumiWon] });
+			return;
+		}
+
+		const youWon = Embeds.error()
+			.setTitle(`You won!`)
+			.setDescription(`${playedChoice} beats ${choice}!`);
+
+		const modifed = this.modifyHappiness(lumi, 2, 'decrement');
+		if (modifed) youWon.setFooter({ text: `-2 Happiness >:(` });
+
+		await interaction.editReply({ embeds: [youWon] });
+	}
+
 	private async modifyHappiness(
 		lumi: Lumi,
 		amount: number,
@@ -237,67 +299,5 @@ class LumiCommand {
 		});
 
 		return true;
-	}
-
-	@ButtonComponent({
-		id: /rps_(rock|paper|scissors)/
-	})
-	async handleRPSGame(interaction: ButtonInteraction) {
-		const cacheKey = `playingRPS_${interaction.user.id}`;
-		if (!cache.get(cacheKey)) {
-			await interaction.deferUpdate();
-			return;
-		}
-		cache.del(cacheKey);
-
-		// only used so i don't have to specify ephemeral for each message :sob:
-		await interaction.deferReply({
-			ephemeral: true
-		});
-
-		const choices = ['rock', 'paper', 'scissors'];
-		const choice = choices[Math.floor(Math.random() * choices.length)];
-		const playedChoice = interaction.customId.split('_').pop();
-
-		const lumi = await prisma.lumi.findUnique({
-			where: {
-				playerId: interaction.user.id
-			}
-		});
-
-		if (choice === playedChoice) {
-			const tieEmbed = Embeds.info()
-				.setTitle("It's a tie!")
-				.setDescription(`You and ${lumi.name} both chose ${playedChoice}!`);
-			await interaction.editReply({ embeds: [tieEmbed] });
-			return;
-		}
-
-		const winningConditions = {
-			rock: 'scissors',
-			scissors: 'paper',
-			paper: 'rock'
-		};
-
-		if (winningConditions[choice] === playedChoice) {
-			const lumiWon = Embeds.success()
-				.setTitle(`${lumi.name} won!`)
-				.setDescription(`${choice} beats ${playedChoice}!`);
-
-			const modifed = this.modifyHappiness(lumi, 2, 'increment');
-			if (modifed) lumiWon.setFooter({ text: `+2 Happiness c:` });
-
-			await interaction.editReply({ embeds: [lumiWon] });
-			return;
-		}
-
-		const youWon = Embeds.error()
-			.setTitle(`You won!`)
-			.setDescription(`${playedChoice} beats ${choice}!`);
-
-		const modifed = this.modifyHappiness(lumi, 2, 'decrement');
-		if (modifed) youWon.setFooter({ text: `-2 Happiness >:(` });
-
-		await interaction.editReply({ embeds: [youWon] });
 	}
 }
