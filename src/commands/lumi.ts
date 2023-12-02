@@ -42,6 +42,11 @@ export class LumiCommand {
 			ephemeral: true
 		});
 
+		const player = await prisma.player.findUnique({
+			where: {
+				id: interaction.user.id
+			}
+		});
 		const lumi = await prisma.lumi.findUnique({
 			where: {
 				playerId: interaction.user.id
@@ -86,6 +91,11 @@ export class LumiCommand {
 			{
 				name: 'Happiness',
 				value: `${stats.happiness} ${happinessEmoji()}`,
+				inline: true
+			},
+			{
+				name: 'LumiCoins™️',
+				value: `${player.lumicoins} :coin:`,
 				inline: true
 			},
 			{
@@ -256,6 +266,9 @@ export class LumiCommand {
 			return;
 		}
 		globalCache.set(cacheKey, true, 60 * 10);
+
+		// give 5 coins for playing a game
+		await LumiUtils.modifyCoins(interaction.user.id, 5, 'increment');
 
 		switch (game) {
 			case 'rps': {
