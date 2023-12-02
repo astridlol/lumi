@@ -23,7 +23,7 @@ import { prisma } from '..';
 import NodeCache from 'node-cache';
 import { RequireLumi } from '../guards/RequireLumi';
 import { Lumi } from '@prisma/client';
-import { getCommand, prettify, removeOne } from '../lib/General';
+import { getCommand, getRandomResponse, prettify, removeOne } from '../lib/General';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
 const allFood: Food = require('../constants/Food.toml');
@@ -50,8 +50,7 @@ class LumiCommand {
 			}
 		});
 
-		const randomResponse =
-			allResponses.disown[Math.floor(Math.random() * allResponses.disown.length)];
+		const randomResponse = getRandomResponse(allResponses.disown, interaction.user);
 		const embed = Embeds.error()
 			.setTitle('Are you sure?')
 			.setDescription(`${lumi.name}: ${randomResponse}`)
@@ -124,7 +123,6 @@ class LumiCommand {
 		});
 
 		const foodData = allFood[foodItem];
-		console.log(foodData);
 		if (!foodData) {
 			interaction.editReply({
 				embeds: [Embeds.unexpected()]
@@ -136,11 +134,8 @@ class LumiCommand {
 		if (modifiedHealth) {
 			// prevent from feeding for 30 minutes
 			cache.set(`recentlyFed_${lumi.id}`, true, 60 * 30);
-			const randomResponse = allResponses.fed[Math.floor(Math.random() * allResponses.fed.length)];
-
-			const embed = Embeds.success()
-				.setTitle('Yummy!')
-				.setDescription(`${lumi.name}: ${randomResponse}`);
+			const response = getRandomResponse(allResponses.fed, interaction.user);
+			const embed = Embeds.success().setTitle('Yummy!').setDescription(`${lumi.name}: ${response}`);
 			await interaction.editReply({
 				embeds: [embed]
 			});

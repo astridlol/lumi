@@ -1,3 +1,4 @@
+import { User } from 'discord.js';
 import { client } from '..';
 
 const Dayjs = require('dayjs');
@@ -31,4 +32,9 @@ const removeOne = (arr: string[], item: string) => {
 	return arr;
 };
 
-export { prettify, getTime, getCommand, removeOne };
+const getRandomResponse = (arr: string[], user: User) => {
+	const randomResponse = arr[Math.floor(Math.random() * arr.length)];
+	return randomResponse.replace('{username}', user.username);
+};
+
+export { prettify, getTime, getCommand, removeOne, getRandomResponse };
