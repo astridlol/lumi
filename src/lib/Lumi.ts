@@ -19,8 +19,8 @@ async function modifyHappiness(
 		where
 	});
 
-	if (action == 'increment' && stats.happiness >= 100) return false;
-	if (action == 'decrement' && stats.happiness <= 0) return false;
+	if (action == 'increment' && stats.happiness + amount >= 100) return false;
+	if (action == 'decrement' && stats.happiness - amount <= 0) return false;
 
 	const updateData: UpdateData = {};
 
