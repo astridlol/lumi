@@ -19,25 +19,91 @@ import {
 	CommandInteraction
 } from 'discord.js';
 import * as Embeds from '../constants/Embeds';
-import { prisma } from '..';
-import NodeCache from 'node-cache';
+import { globalCache, prisma } from '..';
 import { RequireLumi } from '../guards/RequireLumi';
 import { Lumi } from '@prisma/client';
 import { getCommand, getRandomResponse, prettify, removeOne, sleep } from '../lib/General';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
+import dayjs from 'dayjs';
 const allFood: Food = require('../constants/Food.toml');
 const allResponses: Responses = require('../constants/Responses.toml');
 
 type LumiGames = 'rps' | 'snow';
-
-const cache = new NodeCache({ stdTTL: 60 });
 
 @Discord()
 @Guard(RequireLumi)
 @SlashGroup({ description: 'Manage your Lumi', name: 'lumi' })
 @SlashGroup('lumi')
 class LumiCommand {
+	@Slash({ description: 'View stats for your Lumi' })
+	async stats(interaction: CommandInteraction) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+		const stats = await prisma.lumiStats.findUnique({
+			where: {
+				lumiId: lumi.id
+			}
+		});
+
+		const happinessEmoji = () => {
+			if (stats.happiness > 90) return ':grin:';
+			if (stats.happiness > 70) return ':slight_smile:';
+			if (stats.happiness > 50) return ':rolling_eyes:';
+			if (stats.happiness > 30) return ':sob:';
+			else return ':rage:';
+		};
+
+		const ageEmoji = () => {
+			if (lumi.age < 4) return ':baby_bottle:';
+			if (stats.happiness < 13) return ':child:';
+			if (stats.happiness > 18) return ':star_struck:';
+			if (stats.happiness > 60) return ':older_adult:';
+			else return ':skull:';
+		};
+
+		const adopted = dayjs(lumi.birthday).unix();
+
+		const embed = Embeds.success().setTitle('Statistics');
+		embed.setFields([
+			{
+				name: 'Name',
+				value: lumi.name,
+				inline: true
+			},
+			{
+				name: 'Health',
+				value: `${stats.health} :heart:`,
+				inline: true
+			},
+			{
+				name: 'Happiness',
+				value: `${stats.happiness} ${happinessEmoji()}`,
+				inline: true
+			},
+			{
+				name: 'Age',
+				value: `${lumi.age} ${ageEmoji()}`,
+				inline: true
+			},
+			{
+				name: 'Adopted',
+				value: `<t:${adopted}:R> (<t:${adopted}:f>)`
+			}
+		]);
+
+		interaction.editReply({
+			embeds: [embed]
+		});
+	}
+
 	@Slash({ description: 'Disown your Lumi :(' })
 	async disown(interaction: CommandInteraction) {
 		await interaction.deferReply({
@@ -104,7 +170,7 @@ class LumiCommand {
 			}
 		});
 
-		const fedRecently = cache.get(`recentlyFed_${lumi.id}`);
+		const fedRecently = globalCache.get(`recentlyFed_${lumi.id}`);
 
 		if (fedRecently) {
 			const embed = Embeds.error()
@@ -133,7 +199,7 @@ class LumiCommand {
 
 		if (modifiedHealth) {
 			// prevent from feeding for 30 minutes
-			cache.set(`recentlyFed_${lumi.id}`, true, 60 * 30);
+			globalCache.set(`recentlyFed_${lumi.id}`, true, 60 * 30);
 			const response = getRandomResponse(allResponses.fed, interaction.user);
 			const embed = Embeds.success().setTitle('Yummy!').setDescription(`${lumi.name}: ${response}`);
 			await interaction.editReply({
@@ -174,7 +240,7 @@ class LumiCommand {
 		await interaction.deferReply({ ephemeral: true });
 
 		const cacheKey = `recentlyPlayed_${interaction.user.id}`;
-		if (cache.has(cacheKey)) {
+		if (globalCache.has(cacheKey)) {
 			const lumi = await prisma.lumi.findUnique({
 				where: {
 					playerId: interaction.user.id
@@ -189,7 +255,7 @@ class LumiCommand {
 			});
 			return;
 		}
-		cache.set(cacheKey, true, 60 * 10);
+		globalCache.set(cacheKey, true, 60 * 10);
 
 		switch (game) {
 			case 'rps': {
@@ -204,7 +270,7 @@ class LumiCommand {
 	}
 
 	private async playRPS(interaction: CommandInteraction) {
-		cache.set(`playingRPS_${interaction.user.id}`, true);
+		globalCache.set(`playingRPS_${interaction.user.id}`, true);
 
 		const rock = new ButtonBuilder()
 			.setCustomId('rps_rock')
@@ -330,11 +396,11 @@ class LumiCommand {
 	})
 	async handleRPSGame(interaction: ButtonInteraction) {
 		const cacheKey = `playingRPS_${interaction.user.id}`;
-		if (!cache.get(cacheKey)) {
+		if (!globalCache.get(cacheKey)) {
 			await interaction.deferUpdate();
 			return;
 		}
-		cache.del(cacheKey);
+		globalCache.del(cacheKey);
 
 		// only used so i don't have to specify ephemeral for each message :sob:
 		await interaction.deferReply({

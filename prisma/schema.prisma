@@ -10,7 +10,8 @@ datasource db {
 model Lumi {
   id        String   @id @default(cuid())
   name String
-  createdAt DateTime @default(now())
+  birthday DateTime @default(now())
+  age Int @default(1)
   playerId  String @unique
 }
 

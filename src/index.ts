@@ -4,9 +4,11 @@ import { importx } from '@discordx/importer';
 import { Client } from 'discordx';
 import { PrismaClient } from '@prisma/client';
 import { env } from './env/server';
+import NodeCache from 'node-cache';
 
 require('dotenv').config();
 
+export const globalCache = new NodeCache();
 export const prisma = new PrismaClient();
 
 export const client = new Client({
