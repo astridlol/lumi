@@ -19,6 +19,7 @@ async function modifyHappiness(
 		where
 	});
 
+	// TODO: Ideally take the remainder instead
 	if (action == 'increment' && stats.happiness + amount >= 100) return false;
 	if (action == 'decrement' && stats.happiness - amount <= 0) return false;
 

@@ -31,6 +31,8 @@ async function babyAging() {
 			});
 		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(wish);
 
+		LumiUtils.modifyCoins(f.playerId, 2, 'increment');
+
 		const user = await client.users.fetch(f.playerId);
 		try {
 			await user.send({
