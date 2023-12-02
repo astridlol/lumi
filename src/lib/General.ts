@@ -1,5 +1,6 @@
 import { User } from 'discord.js';
 import { client } from '..';
+import { promisify } from 'util';
 
 const Dayjs = require('dayjs');
 var utc = require('dayjs/plugin/utc');
@@ -37,4 +38,6 @@ const getRandomResponse = (arr: string[], user: User) => {
 	return randomResponse.replace('{username}', user.username);
 };
 
-export { prettify, getTime, getCommand, removeOne, getRandomResponse };
+const sleep = promisify(setTimeout);
+
+export { prettify, getTime, getCommand, removeOne, getRandomResponse, sleep };

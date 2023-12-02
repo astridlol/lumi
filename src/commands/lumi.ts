@@ -23,13 +23,13 @@ import { prisma } from '..';
 import NodeCache from 'node-cache';
 import { RequireLumi } from '../guards/RequireLumi';
 import { Lumi } from '@prisma/client';
-import { getCommand, getRandomResponse, prettify, removeOne } from '../lib/General';
+import { getCommand, getRandomResponse, prettify, removeOne, sleep } from '../lib/General';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
 const allFood: Food = require('../constants/Food.toml');
 const allResponses: Responses = require('../constants/Responses.toml');
 
-type LumiGames = 'rps' | 'walking';
+type LumiGames = 'rps' | 'snow';
 
 const cache = new NodeCache({ stdTTL: 60 });
 
@@ -161,6 +161,7 @@ class LumiCommand {
 	@Slash({ description: 'Play with your lumi' })
 	async play(
 		@SlashChoice({ name: 'Rock paper scisors', value: 'rps' })
+		@SlashChoice({ name: 'Play in the snow', value: 'snow' })
 		@SlashOption({
 			description: 'What game?',
 			name: 'game',
@@ -174,6 +175,10 @@ class LumiCommand {
 		switch (game) {
 			case 'rps': {
 				this.playRPS(interaction);
+				break;
+			}
+			case 'snow': {
+				this.playInSnow(interaction);
 				break;
 			}
 		}
@@ -204,6 +209,55 @@ class LumiCommand {
 			embeds: [embed],
 			components: [row]
 		});
+	}
+
+	private async playInSnow(interaction: CommandInteraction) {
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		interaction.editReply({
+			content: `You take ${lumi.name} out to play in the snow...`
+		});
+
+		await sleep(2000);
+
+		const chance = Math.random();
+		const isFeelingSnow = chance < 0.7;
+
+		if (!isFeelingSnow) {
+			await this.modifyHappiness(lumi, 10, 'decrement');
+			const embed = Embeds.error()
+				.setTitle(`${lumi.name} is not up for snow today`)
+				.setDescription(
+					`${lumi.name} says:\n> ${getRandomResponse(allResponses.noSnow, interaction.user)}`
+				)
+				.setFooter({
+					text: '-10 Happiness'
+				});
+			await interaction.editReply({
+				content: null,
+				embeds: [embed]
+			});
+			return;
+		}
+
+		await this.modifyHappiness(lumi, 10, 'increment');
+		const embed = Embeds.success()
+			.setTitle(`Yay!`)
+			.setDescription(
+				`${lumi.name} says:\n> ${getRandomResponse(allResponses.snowPlay, interaction.user)}`
+			)
+			.setFooter({
+				text: '+10 Happiness'
+			});
+		await interaction.editReply({
+			content: null,
+			embeds: [embed]
+		});
+		return;
 	}
 
 	@ButtonComponent({
