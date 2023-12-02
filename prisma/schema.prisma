@@ -23,5 +23,6 @@ model LumiStats {
 model Player {
   id  String @id
   lumi String?
+  lumicoins Int @default(10)
   food Json @default("[\"kibble\"]")
 }

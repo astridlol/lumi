@@ -15,8 +15,8 @@ export const client = new Client({
 });
 
 client.on('ready', async () => {
-	await client.clearApplicationCommands();
-	await client.initApplicationCommands();
+	// await client.clearApplicationCommands();
+	// await client.initApplicationCommands();
 
 	console.log('> Lumi is now awake, logged in as: ' + client.user!!.tag);
 });

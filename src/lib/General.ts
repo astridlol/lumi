@@ -25,4 +25,10 @@ const getCommand = async (name: string) => {
 	return client.application.commands.cache.find((c) => c.name == name);
 };
 
-export { prettify, getTime, getCommand };
+const removeOne = (arr: string[], item: string) => {
+	const index = arr.indexOf(item);
+	if (index !== -1) arr.splice(index, 1);
+	return arr;
+};
+
+export { prettify, getTime, getCommand, removeOne };

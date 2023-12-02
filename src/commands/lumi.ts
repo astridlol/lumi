@@ -1,3 +1,5 @@
+require('toml-require').install();
+
 import {
 	ButtonComponent,
 	Discord,
@@ -10,6 +12,7 @@ import {
 import {
 	ActionRowBuilder,
 	ApplicationCommandOptionType,
+	AutocompleteInteraction,
 	ButtonBuilder,
 	ButtonInteraction,
 	ButtonStyle,
@@ -20,6 +23,11 @@ import { prisma } from '..';
 import NodeCache from 'node-cache';
 import { RequireLumi } from '../guards/RequireLumi';
 import { Lumi } from '@prisma/client';
+import { prettify, removeOne } from '../lib/General';
+import Food from '../interfaces/Food';
+import Responses from '../interfaces/Responses';
+const allFood: Food = require('../constants/Food.toml');
+const allResponses: Responses = require('../constants/Responses.toml');
 
 type LumiGames = 'rps' | 'walking';
 
@@ -30,6 +38,91 @@ const cache = new NodeCache({ stdTTL: 60 });
 @SlashGroup({ description: 'Manage your Lumi', name: 'lumi' })
 @SlashGroup('lumi')
 class LumiCommand {
+	@Slash({ description: 'Feed your Lumi' })
+	async feed(
+		@SlashOption({
+			autocomplete: async function (interaction: AutocompleteInteraction) {
+				const player = await prisma.player.findUnique({
+					where: {
+						id: interaction.user.id
+					}
+				});
+				const food = player.food as string[];
+				interaction.respond(
+					food.map((item) => {
+						return { name: prettify(item), value: item };
+					})
+				);
+			},
+			description: 'The food to give',
+			name: 'food',
+			required: true,
+			type: ApplicationCommandOptionType.String
+		})
+		foodItem: string,
+		interaction: CommandInteraction
+	) {
+		interaction.deferReply({
+			ephemeral: true
+		});
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		const fedRecently = cache.get(`recentlyFed_${lumi.id}`);
+
+		if (fedRecently) {
+			const embed = Embeds.error()
+				.setTitle(`${lumi.name} was fed recently!`)
+				.setDescription(`You've already fed ${lumi.name} recently, come back later.`);
+			await interaction.editReply({
+				embeds: [embed]
+			});
+			return;
+		}
+
+		const player = await prisma.player.findUnique({
+			where: {
+				id: interaction.user.id
+			}
+		});
+
+		const foodData = allFood[foodItem];
+
+		const modifiedHealth = this.modifyHealth(lumi, foodData.healthPoints, 'increment');
+
+		if (modifiedHealth) {
+			// prevent from feeding for 30 minutes
+			cache.set(`recentlyFed_${lumi.id}`, true, 60 * 30);
+			const randomResponse = allResponses.fed[Math.floor(Math.random() * allResponses.fed.length)];
+
+			const embed = Embeds.success()
+				.setTitle('Yummy!')
+				.setDescription(`${lumi.name}: ${randomResponse}`);
+			await interaction.editReply({
+				embeds: [embed]
+			});
+
+			const newFood = removeOne(player.food as string[], foodItem);
+			await prisma.player.update({
+				where: {
+					id: interaction.user.id
+				},
+				data: {
+					food: newFood
+				}
+			});
+
+			return;
+		}
+
+		interaction.editReply({
+			content: `${lumi.name}: I'm already at max health, silly!`
+		});
+	}
+
 	@Slash({ description: 'Play with your lumi' })
 	async play(
 		@SlashChoice({ name: 'Rock paper scisors', value: 'rps' })
@@ -106,6 +199,40 @@ class LumiCommand {
 			where,
 			data: {
 				happiness: updateData
+			}
+		});
+
+		return true;
+	}
+
+	private async modifyHealth(
+		lumi: Lumi,
+		amount: number,
+		action: 'increment' | 'decrement'
+	): Promise<boolean> {
+		const where = {
+			lumiId: lumi.id
+		};
+
+		const stats = await prisma.lumiStats.findUnique({
+			where
+		});
+
+		if (action == 'increment' && stats.health >= 100) return false;
+		if (action == 'decrement' && stats.health <= 0) return false;
+
+		const updateData: {
+			increment?: number;
+			decrement?: number;
+		} = {};
+
+		if (action == 'increment') updateData.increment = amount;
+		else updateData.decrement = amount;
+
+		await prisma.lumiStats.update({
+			where,
+			data: {
+				health: updateData
 			}
 		});
 
