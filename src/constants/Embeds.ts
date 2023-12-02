@@ -16,4 +16,10 @@ const info = () => {
 	return embed;
 };
 
-export { success, error, info };
+const unexpected = () => {
+	return error()
+		.setTitle('Uh oh!')
+		.setDescription('Lumi encountered an unexpected error. Please try again later!');
+};
+
+export { success, error, info, unexpected };

@@ -23,7 +23,7 @@ import { prisma } from '..';
 import NodeCache from 'node-cache';
 import { RequireLumi } from '../guards/RequireLumi';
 import { Lumi } from '@prisma/client';
-import { prettify, removeOne } from '../lib/General';
+import { getCommand, prettify, removeOne } from '../lib/General';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
 const allFood: Food = require('../constants/Food.toml');
@@ -38,6 +38,40 @@ const cache = new NodeCache({ stdTTL: 60 });
 @SlashGroup({ description: 'Manage your Lumi', name: 'lumi' })
 @SlashGroup('lumi')
 class LumiCommand {
+	@Slash({ description: 'Disown your Lumi :(' })
+	async disown(interaction: CommandInteraction) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		const randomResponse =
+			allResponses.disown[Math.floor(Math.random() * allResponses.disown.length)];
+		const embed = Embeds.error()
+			.setTitle('Are you sure?')
+			.setDescription(`${lumi.name}: ${randomResponse}`)
+			.setFooter({
+				text: `This is not reverisble! | All Lumi data will be wiped.`
+			});
+
+		const disown = new ButtonBuilder()
+			.setCustomId('disown')
+			.setStyle(ButtonStyle.Danger)
+			.setLabel(`Disown ${lumi.name}`);
+
+		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(disown);
+
+		interaction.editReply({
+			embeds: [embed],
+			components: [row]
+		});
+	}
+
 	@Slash({ description: 'Feed your Lumi' })
 	async feed(
 		@SlashOption({
@@ -90,7 +124,13 @@ class LumiCommand {
 		});
 
 		const foodData = allFood[foodItem];
-
+		console.log(foodData);
+		if (!foodData) {
+			interaction.editReply({
+				embeds: [Embeds.unexpected()]
+			});
+			return;
+		}
 		const modifiedHealth = this.modifyHealth(lumi, foodData.healthPoints, 'increment');
 
 		if (modifiedHealth) {
@@ -168,6 +208,52 @@ class LumiCommand {
 		interaction.editReply({
 			embeds: [embed],
 			components: [row]
+		});
+	}
+
+	@ButtonComponent({
+		id: 'disown'
+	})
+	async handleDisown(interaction: ButtonInteraction) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		await prisma.lumiStats.delete({
+			where: {
+				lumiId: lumi.id
+			}
+		});
+
+		await prisma.lumi.delete({
+			where: {
+				id: lumi.id
+			}
+		});
+
+		await prisma.player.update({
+			where: {
+				id: interaction.user.id
+			},
+			data: {
+				lumi: null
+			}
+		});
+
+		const adopt = await getCommand('adopt');
+		const embed = Embeds.success()
+			.setTitle('Bye bye')
+			.setDescription(
+				`${lumi.name} has been sent back to the adoption center. If you're ever up for it again, use </adopt:${adopt.id}>.`
+			);
+
+		await interaction.editReply({
+			embeds: [embed]
 		});
 	}
 
