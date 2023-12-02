@@ -3,6 +3,7 @@ import { RequireLumi } from '../guards/RequireLumi';
 import { ButtonInteraction } from 'discord.js';
 import { globalCache, prisma } from '..';
 import * as Embeds from '../constants/Embeds';
+import * as LumiUtils from '../lib/Lumi';
 
 @Discord()
 @Guard(RequireLumi)
@@ -62,6 +63,8 @@ export class Praise {
 		interaction.editReply({
 			content: `You've praised ${lumi.name} and increased both their happiness and health!`
 		});
+
+		LumiUtils.modifyCoins(interaction.user.id, 10, 'increment');
 
 		globalCache.set(`recentPraise_${interaction.user.id}`, true, 60 * 10);
 	}
