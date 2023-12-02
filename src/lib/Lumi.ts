@@ -68,6 +68,26 @@ async function modifyHealth(
 	return true;
 }
 
+async function modifyCoins(
+	playerId: string,
+	amount: number,
+	action: 'increment' | 'decrement'
+): Promise<void> {
+	const updateData: UpdateData = {};
+
+	if (action == 'increment') updateData.increment = amount;
+	else updateData.decrement = amount;
+
+	await prisma.player.update({
+		where: {
+			id: playerId
+		},
+		data: {
+			lumicoins: updateData
+		}
+	});
+}
+
 async function isWilling(lumi: Lumi) {
 	const stats = await prisma.lumiStats.findUnique({
 		where: {
@@ -79,4 +99,4 @@ async function isWilling(lumi: Lumi) {
 	return chance < stats.sportsmanship.toNumber();
 }
 
-export { modifyHappiness, modifyHealth, isWilling };
+export { modifyHappiness, modifyHealth, modifyCoins, isWilling };
