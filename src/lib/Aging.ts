@@ -3,7 +3,7 @@ import * as cron from 'node-cron';
 import * as Embeds from '../constants/Embeds';
 import { ButtonBuilder } from '@discordjs/builders';
 import { ActionRowBuilder, ButtonStyle } from 'discord.js';
-import { LumiCommand } from '../commands/lumi';
+import * as LumiUtils from '../lib/Lumi';
 
 cron.schedule('*/15 * * * *', async () => babyAging());
 
@@ -40,8 +40,7 @@ async function babyAging() {
 		} catch (err) {
 			console.log(err);
 			// If the DM failed to send, the user has probably blocked Lumi. Decrement 20 happiness points, as that's just harsh.
-			const l = new LumiCommand();
-			l.modifyHappiness(f, 20, 'decrement');
+			LumiUtils.modifyHappiness(f, 20, 'decrement');
 		}
 	});
 

@@ -21,11 +21,11 @@ import {
 import * as Embeds from '../constants/Embeds';
 import { globalCache, prisma } from '..';
 import { RequireLumi } from '../guards/RequireLumi';
-import { Lumi } from '@prisma/client';
 import { getCommand, getRandomResponse, prettify, removeOne, sleep } from '../lib/General';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
 import dayjs from 'dayjs';
+import * as LumiUtils from '../lib/Lumi';
 const allFood: Food = require('../constants/Food.toml');
 const allResponses: Responses = require('../constants/Responses.toml');
 
@@ -195,7 +195,7 @@ export class LumiCommand {
 			});
 			return;
 		}
-		const modifiedHealth = this.modifyHealth(lumi, foodData.healthPoints, 'increment');
+		const modifiedHealth = LumiUtils.modifyHealth(lumi, foodData.healthPoints, 'increment');
 
 		if (modifiedHealth) {
 			// prevent from feeding for 30 minutes
@@ -309,11 +309,10 @@ export class LumiCommand {
 
 		await sleep(2000);
 
-		const chance = Math.random();
-		const isFeelingSnow = chance < 0.7;
+		const isFeelingSnow = LumiUtils.isWilling(lumi);
 
 		if (!isFeelingSnow) {
-			await this.modifyHappiness(lumi, 10, 'decrement');
+			await LumiUtils.modifyHappiness(lumi, 10, 'decrement');
 			const embed = Embeds.error()
 				.setTitle(`${lumi.name} is not up for snow today`)
 				.setDescription(
@@ -329,7 +328,7 @@ export class LumiCommand {
 			return;
 		}
 
-		await this.modifyHappiness(lumi, 10, 'increment');
+		await LumiUtils.modifyHappiness(lumi, 10, 'increment');
 		const embed = Embeds.success()
 			.setTitle(`Yay!`)
 			.setDescription(
@@ -436,7 +435,7 @@ export class LumiCommand {
 				.setTitle(`${lumi.name} won!`)
 				.setDescription(`${choice} beats ${playedChoice}!`);
 
-			const modifed = this.modifyHappiness(lumi, 2, 'increment');
+			const modifed = LumiUtils.modifyHappiness(lumi, 2, 'increment');
 			if (modifed) lumiWon.setFooter({ text: `+2 Happiness c:` });
 
 			await interaction.editReply({ embeds: [lumiWon] });
@@ -447,77 +446,9 @@ export class LumiCommand {
 			.setTitle(`You won!`)
 			.setDescription(`${playedChoice} beats ${choice}!`);
 
-		const modifed = this.modifyHappiness(lumi, 2, 'decrement');
+		const modifed = LumiUtils.modifyHappiness(lumi, 2, 'decrement');
 		if (modifed) youWon.setFooter({ text: `-2 Happiness >:(` });
 
 		await interaction.editReply({ embeds: [youWon] });
-	}
-
-	async modifyHappiness(
-		lumi: Lumi,
-		amount: number,
-		action: 'increment' | 'decrement'
-	): Promise<boolean> {
-		const where = {
-			lumiId: lumi.id
-		};
-
-		const stats = await prisma.lumiStats.findUnique({
-			where
-		});
-
-		if (action == 'increment' && stats.happiness >= 100) return false;
-		if (action == 'decrement' && stats.happiness <= 0) return false;
-
-		const updateData: {
-			increment?: number;
-			decrement?: number;
-		} = {};
-
-		if (action == 'increment') updateData.increment = amount;
-		else updateData.decrement = amount;
-
-		await prisma.lumiStats.update({
-			where,
-			data: {
-				happiness: updateData
-			}
-		});
-
-		return true;
-	}
-
-	async modifyHealth(
-		lumi: Lumi,
-		amount: number,
-		action: 'increment' | 'decrement'
-	): Promise<boolean> {
-		const where = {
-			lumiId: lumi.id
-		};
-
-		const stats = await prisma.lumiStats.findUnique({
-			where
-		});
-
-		if (action == 'increment' && stats.health >= 100) return false;
-		if (action == 'decrement' && stats.health <= 0) return false;
-
-		const updateData: {
-			increment?: number;
-			decrement?: number;
-		} = {};
-
-		if (action == 'increment') updateData.increment = amount;
-		else updateData.decrement = amount;
-
-		await prisma.lumiStats.update({
-			where,
-			data: {
-				health: updateData
-			}
-		});
-
-		return true;
 	}
 }

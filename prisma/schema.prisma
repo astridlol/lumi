@@ -19,6 +19,7 @@ model LumiStats {
   lumiId String @id
   health Int @default(75)
   happiness Int @default(75)
+  sportsmanship Decimal @default(0.7)
 }
 
 model Player {

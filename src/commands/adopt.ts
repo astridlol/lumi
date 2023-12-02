@@ -120,9 +120,12 @@ class Adopt {
 			}
 		});
 
+		let sportsmanship = Math.round(Math.random() * 100) / 100;
+
 		await prisma.lumiStats.create({
 			data: {
-				lumiId: theirLumi.id
+				lumiId: theirLumi.id,
+				sportsmanship
 			}
 		});
 
