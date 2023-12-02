@@ -14,6 +14,12 @@ model Lumi {
   playerId  String
 }
 
+model LumiStats {
+  lumiId String @id
+  hunger Int @default(100)
+  hapiness Int @default(0)
+}
+
 model Player {
   id  String @id
   lumi String?

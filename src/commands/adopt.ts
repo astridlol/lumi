@@ -120,6 +120,12 @@ class Adopt {
 			}
 		});
 
+		await prisma.lumiStats.create({
+			data: {
+				lumiId: theirLumi.id
+			}
+		});
+
 		let currentIndex = 0;
 		const intervalId = setInterval(async () => displayMsg(), 2500);
 
