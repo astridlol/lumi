@@ -4,6 +4,7 @@ import {
 	ButtonComponent,
 	Discord,
 	Guard,
+	SelectMenuComponent,
 	Slash,
 	SlashChoice,
 	SlashGroup,
@@ -16,20 +17,25 @@ import {
 	ButtonBuilder,
 	ButtonInteraction,
 	ButtonStyle,
-	CommandInteraction
+	CommandInteraction,
+	SelectMenuInteraction,
+	StringSelectMenuBuilder,
+	StringSelectMenuOptionBuilder
 } from 'discord.js';
+import dayjs from 'dayjs';
 import * as Embeds from '../constants/Embeds';
 import { globalCache, prisma } from '..';
 import { RequireLumi } from '../guards/RequireLumi';
 import { getCommand, getRandomResponse, prettify, removeOne, sleep } from '../lib/General';
+import * as LumiUtils from '../lib/Lumi';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
-import dayjs from 'dayjs';
-import * as LumiUtils from '../lib/Lumi';
-const allFood: Food = require('../constants/Food.toml');
+import Toys from '../interfaces/Toys';
+
 const allResponses: Responses = require('../constants/Responses.toml');
 
 type LumiGames = 'rps' | 'snow';
+type ShopTypes = 'food' | 'toys';
 
 @Discord()
 @Guard(RequireLumi)
@@ -171,6 +177,8 @@ export class LumiCommand {
 		foodItem: string,
 		interaction: CommandInteraction
 	) {
+		const allFood: Food = require('../constants/Food.toml');
+
 		interaction.deferReply({
 			ephemeral: true
 		});
@@ -280,6 +288,83 @@ export class LumiCommand {
 				break;
 			}
 		}
+	}
+
+	@Slash({ description: 'Shop for your Lumi' })
+	async market(interaction: CommandInteraction) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		const embed = Embeds.info()
+			.setTitle('Lumi Shop')
+			.setDescription(
+				`On the Lumi shop, you can buy stuff for ${lumi.name}! Choose a category below to get started.`
+			);
+
+		const food = new StringSelectMenuOptionBuilder()
+			.setLabel('Food')
+			.setValue('food')
+			.setEmoji('🥩');
+		const toys = new StringSelectMenuOptionBuilder()
+			.setLabel('Toys')
+			.setValue('toys')
+			.setEmoji('🧸');
+		const select = new StringSelectMenuBuilder().setCustomId('shop-menu').addOptions([food, toys]);
+		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
+
+		interaction.editReply({
+			embeds: [embed],
+			components: [row]
+		});
+	}
+
+	@SelectMenuComponent({
+		id: 'shop-menu'
+	})
+	async handleShop(interaction: SelectMenuInteraction) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		const shop = interaction.values.shift() as ShopTypes;
+		const title = prettify(shop);
+		const allItems = require(`../constants/${title}.toml`);
+
+		const embed = Embeds.info()
+			.setTitle(`Shop | ${title}`)
+			.setDescription(`Here you can buy ${title.toLowerCase()} for ${lumi.name}`);
+
+		const options = Object.keys(allItems).map((k) => {
+			const item = allItems[k];
+			const option = new StringSelectMenuOptionBuilder()
+				.setLabel(`${item.name ?? prettify(k)} (${item.price} 🪙)`)
+				.setValue(k);
+			if (item.emoji) option.setEmoji(item.emoji);
+			return option;
+		});
+
+		const select = new StringSelectMenuBuilder()
+			.setCustomId(`${title.toLowerCase()}_shop`)
+			.addOptions(options);
+		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
+
+		interaction.editReply({
+			embeds: [embed],
+			components: [row]
+		});
 	}
 
 	private async playRPS(interaction: CommandInteraction) {

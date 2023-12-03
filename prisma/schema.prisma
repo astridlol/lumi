@@ -13,6 +13,7 @@ model Lumi {
   birthday DateTime @default(now())
   age Int @default(1)
   playerId  String @unique
+  toys Json @default("[]")
 }
 
 model LumiStats {
