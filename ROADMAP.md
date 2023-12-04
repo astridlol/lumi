@@ -16,4 +16,4 @@ This project is far from finished, there's a lot of features and stuff I would l
 
 - [ ] More advanced Lumi aging, it should take into account health.
 - [ ] More unique games to play and toys to play with
-      _and more to be thought of_
+      <br/> _and more to be thought of_
