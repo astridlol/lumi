@@ -33,6 +33,7 @@ import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
 import { HandleClear } from '../guards/HandleClear';
 import Toys from '../interfaces/Toys';
+import { GameCooldown } from '../guards/GameCooldown';
 
 const allResponses: Responses = require('../constants/Responses.toml');
 
@@ -248,10 +249,12 @@ export class LumiCommand {
 		});
 	}
 
+	@Guard(GameCooldown)
 	@Slash({ description: 'Play with your lumi' })
 	async play(
 		@SlashChoice({ name: 'Rock paper scisors', value: 'rps' })
 		@SlashChoice({ name: 'Play in the snow', value: 'snow' })
+		@SlashChoice({ name: 'Give a toy', value: 'toy' })
 		@SlashOption({
 			description: 'What game?',
 			name: 'game',
@@ -263,27 +266,6 @@ export class LumiCommand {
 	) {
 		await interaction.deferReply({ ephemeral: true });
 
-		const cacheKey = `recentlyPlayed_${interaction.user.id}`;
-		if (globalCache.has(cacheKey)) {
-			const lumi = await prisma.lumi.findUnique({
-				where: {
-					playerId: interaction.user.id
-				}
-			});
-
-			const embed = Embeds.error()
-				.setTitle('Uh oh')
-				.setDescription(`${lumi.name} is a bit worn out, ask again later.`);
-			interaction.editReply({
-				embeds: [embed]
-			});
-			return;
-		}
-		globalCache.set(cacheKey, true, 60 * 10);
-
-		// give 5 coins for playing a game
-		await LumiUtils.modifyCoins(interaction.user.id, 5, 'increment');
-
 		switch (game) {
 			case 'rps': {
 				this.playRPS(interaction);
@@ -291,6 +273,10 @@ export class LumiCommand {
 			}
 			case 'snow': {
 				this.playInSnow(interaction);
+				break;
+			}
+			case 'toy': {
+				this.playWithToy(interaction);
 				break;
 			}
 		}
@@ -497,6 +483,9 @@ export class LumiCommand {
 	}
 
 	private async playRPS(interaction: CommandInteraction) {
+		// give 5 coins for playing rps
+		await LumiUtils.modifyCoins(interaction.user.id, 5, 'increment');
+
 		globalCache.set(`playingRPS_${interaction.user.id}`, true);
 
 		const rock = new ButtonBuilder()
@@ -524,6 +513,9 @@ export class LumiCommand {
 	}
 
 	private async playInSnow(interaction: CommandInteraction) {
+		// give 5 coins for playing rps
+		await LumiUtils.modifyCoins(interaction.user.id, 5, 'increment');
+
 		const lumi = await prisma.lumi.findUnique({
 			where: {
 				playerId: interaction.user.id
@@ -567,6 +559,56 @@ export class LumiCommand {
 		await interaction.editReply({
 			content: null,
 			embeds: [embed]
+		});
+		return;
+	}
+
+	private async playWithToy(interaction: CommandInteraction) {
+		const allToys: Toys = require('../constants/Toys.toml');
+
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+		const ownedToys = lumi.toys as string[];
+
+		if (ownedToys.length == 0) {
+			// TODO: Figure out how to get the ID of a sub command
+
+			const embed = Embeds.error()
+				.setTitle('Uh oh!')
+				.setDescription(`You don't own any toys, buy some from ${bold('/lumi market')}`);
+			await interaction.editReply({
+				embeds: [embed]
+			});
+
+			// Remove their recently played cooldown, so they can execute the command again
+			globalCache.del(`recentlyPlayed_${interaction.user.id}`);
+
+			return;
+		}
+
+		const chooseToy = Embeds.info()
+			.setTitle('Choose a toy')
+			.setDescription(`Click a button below to choose a toy for ${bold(lumi.name)} to play with.`);
+
+		const toys = ownedToys.map((key) => {
+			const item = allToys[key];
+
+			const toyButton = new ButtonBuilder()
+				.setCustomId(`toy_${key}`)
+				.setStyle(ButtonStyle.Primary)
+				.setLabel(item.name);
+			if (item.emoji) toyButton.setEmoji(item.emoji);
+			return toyButton;
+		});
+
+		const row = new ActionRowBuilder<ButtonBuilder>().addComponents(toys);
+
+		interaction.editReply({
+			embeds: [chooseToy],
+			components: [row]
 		});
 		return;
 	}
@@ -683,5 +725,51 @@ export class LumiCommand {
 		}
 
 		await interaction.editReply({ embeds: [youWon] });
+	}
+
+	@Guard(GameCooldown)
+	@ButtonComponent({
+		id: /toy_[a-z]{3,10}/
+	})
+	async handleToy(interaction: ButtonInteraction) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+
+		const shopItem = interaction.customId.split('_').slice(1).join('_');
+		const allToys: Toys = require('../constants/Toys.toml');
+		const item = allToys[shopItem];
+
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				playerId: interaction.user.id
+			}
+		});
+
+		// give 5 coins for playing rps
+		await LumiUtils.modifyCoins(interaction.user.id, 5, 'increment');
+
+		interaction.editReply({
+			content: `You gave ${lumi.name} their ${bold(item.name)}...`
+		});
+
+		await sleep(1000);
+
+		const isGoodSport = await LumiUtils.isWilling(lumi);
+		const givenHappiness = isGoodSport ? item.happiness : item.happiness / 2;
+		const text = isGoodSport ? 'happy' : 'not pleased';
+
+		LumiUtils.modifyHappiness(lumi, givenHappiness, 'increment');
+
+		const embed = isGoodSport ? Embeds.success() : Embeds.info();
+		embed.setTitle(`${lumi.name} was ${text}`);
+		embed.setFooter({
+			text: `+ ${givenHappiness} happiness`
+		});
+
+		await interaction.editReply({
+			content: null,
+			embeds: [embed]
+		});
 	}
 }
