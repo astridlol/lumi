@@ -32,10 +32,11 @@ import * as LumiUtils from '../lib/Lumi';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
 import { HandleClear } from '../guards/HandleClear';
+import Toys from '../interfaces/Toys';
 
 const allResponses: Responses = require('../constants/Responses.toml');
 
-type LumiGames = 'rps' | 'snow';
+type LumiGames = 'rps' | 'snow' | 'toy';
 type ShopTypes = 'food' | 'toys';
 
 const CLEAR_SELECTION = new StringSelectMenuOptionBuilder()
@@ -393,6 +394,12 @@ export class LumiCommand {
 			}
 		});
 
+		const lumi = await prisma.lumi.findUnique({
+			where: {
+				id: player.lumi
+			}
+		});
+
 		const insufficentFunds = Embeds.error()
 			.setTitle('Uh oh!')
 			.setDescription(
@@ -432,6 +439,58 @@ export class LumiCommand {
 
 			await interaction.editReply({
 				content: `Bought 1x ${prettify(shopItem)} for 🪙 ${item.price}`
+			});
+			return;
+		}
+
+		if (shopType == 'toys') {
+			const allToys: Toys = require('../constants/Toys.toml');
+			const item = allToys[shopItem];
+
+			if (player.lumicoins < item.price) {
+				interaction.editReply({
+					embeds: [insufficentFunds]
+				});
+				return;
+			}
+
+			const toys = lumi.toys as string[];
+
+			// Prevent the player from purchasing a toy their Lumi already owns.
+			if (toys.includes(shopItem)) {
+				const embed = Embeds.error()
+					.setTitle(`Uh oh!`)
+					.setDescription(`${lumi.name} already has this toy!`);
+				await interaction.editReply({
+					embeds: [embed]
+				});
+				return;
+			}
+
+			toys.push(shopItem);
+
+			await prisma.lumi.update({
+				where: {
+					id: lumi.id
+				},
+				data: {
+					toys
+				}
+			});
+
+			await prisma.player.update({
+				where: {
+					id: interaction.user.id
+				},
+				data: {
+					lumicoins: {
+						decrement: item.price
+					}
+				}
+			});
+
+			await interaction.editReply({
+				content: `Bought ${item.name} for 🪙 ${item.price}`
 			});
 			return;
 		}
