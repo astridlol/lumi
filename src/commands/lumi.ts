@@ -250,7 +250,7 @@ export class LumiCommand {
 	}
 
 	@Guard(GameCooldown)
-	@Slash({ description: 'Play with your lumi' })
+	@Slash({ description: 'Play with your Lumi' })
 	async play(
 		@SlashChoice({ name: 'Rock paper scisors', value: 'rps' })
 		@SlashChoice({ name: 'Play in the snow', value: 'snow' })
