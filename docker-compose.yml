@@ -6,3 +6,7 @@ services:
     env_file:
       - ./.env
     restart: always
+    volumes:
+      - $PWD/Food.toml:/app/dist/src/constants/Food.toml
+      - $PWD/Responses.toml:/app/dist/src/constants/Responses.toml
+      - $PWD/Toys.toml:/app/dist/src/constants/Toys.toml
