@@ -626,26 +626,7 @@ export class LumiCommand {
 			}
 		});
 
-		await prisma.lumiStats.delete({
-			where: {
-				lumiId: lumi.id
-			}
-		});
-
-		await prisma.lumi.delete({
-			where: {
-				id: lumi.id
-			}
-		});
-
-		await prisma.player.update({
-			where: {
-				id: interaction.user.id
-			},
-			data: {
-				lumi: null
-			}
-		});
+		await LumiUtils.disownLumi(interaction.user.id);
 
 		const adopt = await getCommand('adopt');
 		const embed = Embeds.success()

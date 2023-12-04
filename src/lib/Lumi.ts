@@ -100,4 +100,33 @@ async function isWilling(lumi: Lumi) {
 	return chance < stats.sportsmanship.toNumber();
 }
 
-export { modifyHappiness, modifyHealth, modifyCoins, isWilling };
+async function disownLumi(id: string) {
+	const lumi = await prisma.lumi.findUnique({
+		where: {
+			playerId: id
+		}
+	});
+
+	await prisma.lumiStats.delete({
+		where: {
+			lumiId: lumi.id
+		}
+	});
+
+	await prisma.lumi.delete({
+		where: {
+			id: lumi.id
+		}
+	});
+
+	await prisma.player.update({
+		where: {
+			id
+		},
+		data: {
+			lumi: null
+		}
+	});
+}
+
+export { modifyHappiness, modifyHealth, modifyCoins, isWilling, disownLumi };

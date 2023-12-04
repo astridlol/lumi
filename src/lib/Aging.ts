@@ -7,8 +7,7 @@ import * as LumiUtils from '../lib/Lumi';
 import { Lumi } from '@prisma/client';
 
 cron.schedule('*/15 * * * *', async () => babyAging());
-
-babyAging();
+cron.schedule('0 * * * *', async () => typicalAging());
 
 const getBdayEmbed = (lumi: Lumi): MessageCreateOptions => {
 	const embed = Embeds.success()
@@ -30,12 +29,14 @@ const getBdayEmbed = (lumi: Lumi): MessageCreateOptions => {
 };
 
 async function babyAging() {
-	const allBabyLumi = await prisma.lumi.findMany({
-		where: {
-			age: {
-				lte: 4
-			}
+	const where = {
+		age: {
+			lte: 4
 		}
+	};
+
+	const allBabyLumi = await prisma.lumi.findMany({
+		where
 	});
 
 	allBabyLumi.forEach(async (f) => {
@@ -52,9 +53,21 @@ async function babyAging() {
 	});
 
 	await prisma.lumi.updateMany({
+		where,
+		data: {
+			age: {
+				increment: 1
+			}
+		}
+	});
+}
+
+// TODO: eventually refactor this
+async function typicalAging() {
+	await prisma.lumi.updateMany({
 		where: {
 			age: {
-				lte: 4
+				gte: 4
 			}
 		},
 		data: {
@@ -63,4 +76,35 @@ async function babyAging() {
 			}
 		}
 	});
+
+	const elderlyThreshold = 60;
+	const elderLumiCount = await prisma.lumi.count({
+		where: {
+			age: {
+				gte: elderlyThreshold
+			}
+		}
+	});
+
+	if (elderLumiCount === 0) return;
+	const randomLumi = await prisma.lumi.findFirst({
+		where: {
+			age: {
+				gte: elderlyThreshold
+			}
+		},
+		skip: Math.floor(Math.random() * elderLumiCount)
+	});
+
+	if (!randomLumi) return;
+
+	const user = await client.users.fetch(randomLumi.playerId);
+	const embed = Embeds.error()
+		.setTitle('Rest in peace 💀')
+		.setDescription(`${randomLumi.name} passed away due to natural causes.`);
+	await user.send({
+		embeds: [embed]
+	});
+
+	await LumiUtils.disownLumi(randomLumi.playerId);
 }
