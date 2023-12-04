@@ -3,10 +3,11 @@ import * as cron from 'node-cron';
 import * as Embeds from '../constants/Embeds';
 import { ButtonBuilder } from '@discordjs/builders';
 import { ActionRowBuilder, ButtonStyle, MessageCreateOptions } from 'discord.js';
-import * as LumiUtils from '../lib/Lumi';
+import * as LumiUtils from './Lumi';
 import { Lumi } from '@prisma/client';
 
 cron.schedule('*/15 * * * *', async () => babyAging());
+cron.schedule('*/30 * * * *', async () => healthTick());
 cron.schedule('0 * * * *', async () => typicalAging());
 
 const getBdayEmbed = (lumi: Lumi): MessageCreateOptions => {
@@ -27,6 +28,17 @@ const getBdayEmbed = (lumi: Lumi): MessageCreateOptions => {
 		components: [row]
 	};
 };
+
+async function healthTick() {
+	const allLumi = await prisma.lumi.findMany();
+
+	allLumi.forEach(async (l) => {
+		let response: boolean;
+		if (l.age < 20) response = await LumiUtils.modifyHealth(l, 5, 'decrement');
+		else response = await LumiUtils.modifyHealth(l, 2, 'decrement');
+		if (!response) await handleLumiDeath(l, 'due to lack of food');
+	});
+}
 
 async function babyAging() {
 	const where = {
@@ -98,13 +110,16 @@ async function typicalAging() {
 
 	if (!randomLumi) return;
 
-	const user = await client.users.fetch(randomLumi.playerId);
+	await handleLumiDeath(randomLumi);
+}
+
+async function handleLumiDeath(lumi: Lumi, reason = 'due to natural causes') {
+	const user = await client.users.fetch(lumi.playerId);
 	const embed = Embeds.error()
 		.setTitle('Rest in peace 💀')
-		.setDescription(`${randomLumi.name} passed away due to natural causes.`);
+		.setDescription(`${lumi.name} passed away ${reason}.`);
 	await user.send({
 		embeds: [embed]
 	});
-
-	await LumiUtils.disownLumi(randomLumi.playerId);
+	await LumiUtils.disownLumi(lumi.playerId);
 }
