@@ -20,7 +20,8 @@ import {
 	CommandInteraction,
 	SelectMenuInteraction,
 	StringSelectMenuBuilder,
-	StringSelectMenuOptionBuilder
+	StringSelectMenuOptionBuilder,
+	bold
 } from 'discord.js';
 import dayjs from 'dayjs';
 import * as Embeds from '../constants/Embeds';
@@ -30,12 +31,16 @@ import { getCommand, getRandomResponse, prettify, removeOne, sleep } from '../li
 import * as LumiUtils from '../lib/Lumi';
 import Food from '../interfaces/Food';
 import Responses from '../interfaces/Responses';
-import Toys from '../interfaces/Toys';
+import { HandleClear } from '../guards/HandleClear';
 
 const allResponses: Responses = require('../constants/Responses.toml');
 
 type LumiGames = 'rps' | 'snow';
 type ShopTypes = 'food' | 'toys';
+
+const CLEAR_SELECTION = new StringSelectMenuOptionBuilder()
+	.setLabel(`(Clear selection)`)
+	.setValue('_ignore_');
 
 @Discord()
 @Guard(RequireLumi)
@@ -179,7 +184,7 @@ export class LumiCommand {
 	) {
 		const allFood: Food = require('../constants/Food.toml');
 
-		interaction.deferReply({
+		await interaction.deferReply({
 			ephemeral: true
 		});
 		const lumi = await prisma.lumi.findUnique({
@@ -316,7 +321,9 @@ export class LumiCommand {
 			.setLabel('Toys')
 			.setValue('toys')
 			.setEmoji('🧸');
-		const select = new StringSelectMenuBuilder().setCustomId('shop-menu').addOptions([food, toys]);
+		const select = new StringSelectMenuBuilder()
+			.setCustomId('shop-menu')
+			.addOptions([food, toys, CLEAR_SELECTION]);
 		const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
 
 		interaction.editReply({
@@ -325,6 +332,7 @@ export class LumiCommand {
 		});
 	}
 
+	@Guard(HandleClear)
 	@SelectMenuComponent({
 		id: 'shop-menu'
 	})
@@ -340,6 +348,7 @@ export class LumiCommand {
 		});
 
 		const shop = interaction.values.shift() as ShopTypes;
+
 		const title = prettify(shop);
 		const allItems = require(`../constants/${title}.toml`);
 
@@ -356,6 +365,8 @@ export class LumiCommand {
 			return option;
 		});
 
+		options.push(CLEAR_SELECTION);
+
 		const select = new StringSelectMenuBuilder()
 			.setCustomId(`${title.toLowerCase()}_shop`)
 			.addOptions(options);
@@ -365,6 +376,65 @@ export class LumiCommand {
 			embeds: [embed],
 			components: [row]
 		});
+	}
+
+	@Guard(HandleClear)
+	@SelectMenuComponent({
+		id: /(food|toys)_shop/
+	})
+	async handlePurchase(interaction: SelectMenuInteraction) {
+		await interaction.deferReply({
+			ephemeral: true
+		});
+
+		const player = await prisma.player.findUnique({
+			where: {
+				id: interaction.user.id
+			}
+		});
+
+		const insufficentFunds = Embeds.error()
+			.setTitle('Uh oh!')
+			.setDescription(
+				`You currently have ${bold(
+					`${player.lumicoins}`
+				)} 🪙, which is not enough to purchase this.`
+			);
+
+		const shopType = interaction.customId.split('_').shift() as ShopTypes;
+		const shopItem = interaction.values.shift();
+
+		if (shopType == 'food') {
+			const allFood: Food = require('../constants/Food.toml');
+			const item = allFood[shopItem];
+
+			if (player.lumicoins < item.price) {
+				interaction.editReply({
+					embeds: [insufficentFunds]
+				});
+				return;
+			}
+
+			const food = player.food as string[];
+			food.push(shopItem);
+
+			await prisma.player.update({
+				where: {
+					id: interaction.user.id
+				},
+				data: {
+					lumicoins: {
+						decrement: item.price
+					},
+					food
+				}
+			});
+
+			await interaction.editReply({
+				content: `Bought 1x ${prettify(shopItem)} for 🪙 ${item.price}`
+			});
+			return;
+		}
 	}
 
 	private async playRPS(interaction: CommandInteraction) {
