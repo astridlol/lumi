@@ -1,6 +1,6 @@
 version: '3'
 services:
-  christmas:
+  lumi:
     container_name: lumi
     image: ghcr.io/astridlol/lumi:main
     env_file:
